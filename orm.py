@@ -1,7 +1,7 @@
 #coding:utf-8
 #day3:ORM 对象关系映射：通俗说就是将一个数据库表映射为一个类
 
-import sys
+import sys,random
 import asyncio
 #一步异步，处处使用异步
 import aiomysql
@@ -280,6 +280,23 @@ class Model(dict,metaclass=ModelMetaclass):
 		return cls(**rs[0])
 		#返回一条记录，以dict的形式返回，因为cls的父类继承了dict类
 
+	#根据条件查找
+	@classmethod
+	@asyncio.coroutine
+	def findAll(cls,**kw):
+		rs = []
+		if len(kw) == 0:
+			rs = yield from select(cls.__select__,None)
+		else:
+			args = []
+			values = []
+			for k,v in kw.items():
+				args.append('%s = ?' %k)
+				values.append(v)
+			print('%s where %s' % (cls.__select__,' and '.join(args)),values)
+			rs = yield from select('%s where %s' % (cls.__select__,' and '.join(args)),values)
+		return rs
+
 	@asyncio.coroutine
 	def save(self):
 		args = list(map(self.getValueOrDefault,self.__fields__))
@@ -291,7 +308,7 @@ class Model(dict,metaclass=ModelMetaclass):
 	@asyncio.coroutine
 	def update(self):
 		args = list(map(self.getValue,self.__fields__))
-		args.append(sel.getValue(self.__primary_key__))
+		args.append(self.getValue(self.__primary_key__))
 		rows = yield from execute(self.__update__,args)
 		if rows != 1:
 			logging.info('failed to update record:affected rows:%s'%rows)
@@ -317,34 +334,21 @@ if __name__ == '__main__':
 	@asyncio.coroutine
 	def test():
 		yield from create_pool(loop=loop,host='localhost',port=3306,user='root',password='',db='test')#单引号表示空格
-		user = User(id = 2,name='xh',email='xh@test.com',password='123456')
-		yield from user.save() #插入一条记录
+		user = User(id = random.randint(5,100),name='xh',email='xh@pthon.com',password='123456')
+		yield from user.save() #插入一条记录：测试insert
 		print(user)
-		r = yield from User.find_all() #查询所有记录
+		r = yield from User.findAll(name='xh') #查询所有记录：测试按条件查询
 		print(r)
+		user1 = User(id = 2,name='xiong',email='xh@qq.com',password='123456') #user1是数据库中id已经存在的一行的新数据
+		u = yield from user1.update() #测试update,传入User实例对象的新数据
+		print(user1)
+		d = yield from user.delete() #测试delete
+		print(d)
+		s = yield from User.find(1) #测试find by primary key
+		print(s)
 		yield from destory_pool() #关闭数据库连接池
-
+		
 	loop.run_until_complete(test())
 	loop.close()
 	if loop.is_closed():
 		sys.exit(0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
