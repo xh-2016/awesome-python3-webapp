@@ -129,8 +129,8 @@ class TextField(Field):
 # -*-ModelMetaclass：为一个数据库表映射成一个封装的类做准备
 # 读取具体子类(eg：user)的映射信息
 #创造类的时候，排除对Model类的修改
-#在当前类中查找所有的类属性(attrs),如果找到Field属性，就保存在—__mappings__的dict里，
-#同时产品能够类属性中删除Field（防止实例属性覆盖类的同名属性）
+#在当前类中查找所有的类属性(attrs),如果找到Field属性，就保存在__mappings__的dict里，
+#同时从类属性中删除Field（防止实例属性覆盖类的同名属性）
 #__table__保存数据库表名
 
 class ModelMetaclass(type):
@@ -209,7 +209,7 @@ class Model(dict,metaclass=ModelMetaclass):
 			return self[key]
 		except KeyError:
 			raise AttributeError("'model' object has no attribution:%s"%key)
-	def __setattr__(slef,key,value):
+	def __setattr__(self,key,value):
 		self[key]=value
 	def getValue(self,key):
 		#内建函数getattr会自动处理  
@@ -337,6 +337,9 @@ if __name__ == '__main__':
 		user = User(id = random.randint(5,100),name='xh',email='xh@pthon.com',password='123456')
 		yield from user.save() #插入一条记录：测试insert
 		print(user)
+		#这里可以使用User.findAll()是因为：用@classmethod修饰了Model类里面的findAll()
+		#一般来说，要使用某个类的方法，需要先实例化一个对象再调用方法
+        #而使用@staticmethod或@classmethod，就可以不需要实例化，直接类名.方法名()来调用
 		r = yield from User.findAll(name='xh') #查询所有记录：测试按条件查询
 		print(r)
 		user1 = User(id = 2,name='xiong',email='xh@qq.com',password='123456') #user1是数据库中id已经存在的一行的新数据
